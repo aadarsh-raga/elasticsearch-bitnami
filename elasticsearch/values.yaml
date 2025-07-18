@@ -136,7 +136,7 @@ initScripts:
           "client": "default"
         }
       }' \
-      http://my-elasticsearch:9200/_snapshot/azure_backup; do
+      http://localhost:9200/_snapshot/azure_backup; do
       echo "Waiting for Elasticsearch to be ready..."
       sleep 10
     done
