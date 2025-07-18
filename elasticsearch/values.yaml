@@ -132,11 +132,11 @@ initScripts:
       -d '{
         "type": "azure",
         "settings": {
-          "container": "na",
+          "container": "aadarsh",
           "client": "default"
         }
       }' \
-      http://localhost:9200/_snapshot/azure_backup; do
+      http://my-elasticsearch:9200/_snapshot/azure_backup; do
       echo "Waiting for Elasticsearch to be ready..."
       sleep 10
     done
