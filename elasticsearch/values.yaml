@@ -132,7 +132,7 @@ initScripts:
       -d '{
         "type": "azure",
         "settings": {
-          "container": "aadarsh",
+          "container": "{{ .Values.AzureBlobStorageContainerName }}",
           "client": "default"
         }
       }' \
@@ -155,12 +155,10 @@ initScriptsSecret: ""
 ##    value: env_var_value
 ##
 extraEnvVars:
-  - name: AZURE_STORAGE_ACCOUNT
-    value: "na"
-  - name: AZURE_STORAGE_KEY
-    value: "na"
   - name: AZURE_STORAGE_CONNECTION_STRING
-    value: "na"
+    value: ""
+
+AzureBlobStorageContainerName: ""
 ## @param extraEnvVarsCM ConfigMap containing extra env vars to be added to all pods (evaluated as a template)
 ##
 extraEnvVarsCM: ""
