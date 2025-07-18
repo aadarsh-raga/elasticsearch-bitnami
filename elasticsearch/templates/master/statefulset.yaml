@@ -308,9 +308,9 @@ spec:
               subPath: app-plugins-dir
             - name: data
               mountPath: /bitnami/elasticsearch/data
-            # Added by user request: mount keystore-data PVC
+            # Updated by user request: mount keystore-data PVC at /opt/bitnami/elasticsearch/config
             - name: keystore-data
-              mountPath: /bitnami/elasticsearch/config
+              mountPath: /opt/bitnami/elasticsearch/config
             {{- if .Values.config }}
             - mountPath: /opt/bitnami/elasticsearch/config/elasticsearch.yml
               name: config
