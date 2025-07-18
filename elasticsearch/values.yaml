@@ -37,14 +37,6 @@ global:
       ##
       adaptSecurityContext: auto
 
-keystore:
-  - secretName: azure-snapshot-creds
-    keyMappings:
-      - name: azure.client.default.account
-        key: account
-      - name: azure.client.default.key
-        key: key
-
 ## @section Common parameters
 
 ## @param kubeVersion Override Kubernetes version

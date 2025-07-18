@@ -308,6 +308,9 @@ spec:
               subPath: app-plugins-dir
             - name: data
               mountPath: /bitnami/elasticsearch/data
+            # Added by user request: mount keystore-data PVC
+            - name: keystore-data
+              mountPath: /bitnami/elasticsearch/config
             {{- if .Values.config }}
             - mountPath: /opt/bitnami/elasticsearch/config/elasticsearch.yml
               name: config
@@ -350,6 +353,10 @@ spec:
       volumes:
         - name: empty-dir
           emptyDir: {}
+        # Added by user request: keystore-data PVC
+        - name: keystore-data
+          persistentVolumeClaim:
+            claimName: elasticsearch-keystore
         {{- if or .Values.config .Values.extraConfig }}
         - name: config
           configMap:
