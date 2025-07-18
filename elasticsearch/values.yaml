@@ -1,3 +1,17 @@
+# Copyright Broadcom, Inc. All Rights Reserved.
+# SPDX-License-Identifier: APACHE-2.0
+
+## @section Global parameters
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry, imagePullSecrets and storageClass
+
+## @param global.imageRegistry Global Docker image registry
+## @param global.imagePullSecrets Global Docker registry secret names as an array
+## @param global.storageClass Global StorageClass for Persistent Volume(s)
+## @param global.elasticsearch.service.name Elasticsearch service name to be used in the Kibana subchart (ignored if kibanaEnabled=false)
+## @param global.elasticsearch.service.ports.restAPI Elasticsearch service restAPI port to be used in the Kibana subchart (ignored if kibanaEnabled=false)
+## @param global.kibanaEnabled Whether or not to enable Kibana
 ##
 global:
   imageRegistry: ""
@@ -76,7 +90,7 @@ containerPorts:
 ## @param plugins Comma, semi-colon or space separated list of plugins to install at initialization
 ## ref: https://github.com/bitnami/containers/tree/main/bitnami/elasticsearch#environment-variables
 ##
-plugins: "repository-azure"
+plugins: ""
 ## @param snapshotRepoPath File System snapshot repository path
 ## ref: https://github.com/bitnami/containers/tree/main/bitnami/elasticsearch#environment-variables
 ##
@@ -123,24 +137,7 @@ extraVolumeMounts: []
 ##      #!/bin/sh
 ##      echo "Do something."
 ##
-initScripts:
-  register_azure_repo.sh: |
-    #!/bin/bash
-    set -e
-    echo "Registering Azure snapshot repository in Elasticsearch..."
-    until curl -X PUT -u elastic:${ELASTIC_PASSWORD:-changeme} -H 'Content-Type: application/json' \
-      -d '{
-        "type": "azure",
-        "settings": {
-          "container": "{{ .Values.AzureBlobStorageContainerName }}",
-          "client": "default"
-        }
-      }' \
-      http://localhost:9200/_snapshot/azure_backup; do
-      echo "Waiting for Elasticsearch to be ready..."
-      sleep 10
-    done
-    echo "Azure snapshot repository registered."
+initScripts: {}
 ## @param initScriptsCM ConfigMap with the init scripts. Evaluated as a template.
 ## Note: This will override initScripts
 ##
@@ -154,11 +151,7 @@ initScriptsSecret: ""
 ##  - name: MY_ENV_VAR
 ##    value: env_var_value
 ##
-extraEnvVars:
-  - name: AZURE_STORAGE_CONNECTION_STRING
-    value: ""
-
-AzureBlobStorageContainerName: ""
+extraEnvVars: []
 ## @param extraEnvVarsCM ConfigMap containing extra env vars to be added to all pods (evaluated as a template)
 ##
 extraEnvVarsCM: ""
@@ -512,7 +505,7 @@ master:
   ## @param master.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if master.resources is set (master.resources is recommended for production).
   ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
   ##
-  resourcesPreset: "nano"
+  resourcesPreset: "small"
   ## @param master.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
   ## Example:
   ## resources:
@@ -905,7 +898,7 @@ data:
   ## @param data.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if data.resources is set (data.resources is recommended for production).
   ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
   ##
-  resourcesPreset: "nano"
+  resourcesPreset: "medium"
   ## @param data.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
   ## Example:
   ## resources:
@@ -1299,7 +1292,7 @@ coordinating:
   ## @param coordinating.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if coordinating.resources is set (coordinating.resources is recommended for production).
   ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
   ##
-  resourcesPreset: "nano"
+  resourcesPreset: "small"
   ## @param coordinating.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
   ## Example:
   ## resources:
@@ -1662,7 +1655,7 @@ ingest:
   ## @param ingest.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if ingest.resources is set (ingest.resources is recommended for production).
   ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
   ##
-  resourcesPreset: "nano"
+  resourcesPreset: "small"
   ## @param ingest.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
   ## Example:
   ## resources:
