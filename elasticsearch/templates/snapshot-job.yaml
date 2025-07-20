@@ -26,7 +26,7 @@ spec:
               set -euo pipefail
               
               # Configuration
-              ELASTICSEARCH_URL="http://{{ include "common.names.fullname" . }}-master:{{ .Values.containerPorts.restAPI }}"
+              ELASTICSEARCH_URL="http://{{ include "common.names.fullname" . }}:{{ .Values.containerPorts.restAPI }}"
               REPOSITORY_NAME="azure-repo"
               SNAPSHOT_PREFIX="daily-snapshot"
               RETENTION_DAYS={{ .Values.snapshotAutomation.retention.days | default 30 }}
