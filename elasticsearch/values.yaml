@@ -2747,3 +2747,27 @@ azure:
   ## @param azure.containerName Azure blob container name
   ##
   containerName: ""
+
+## @section Snapshot Automation Parameters
+## Snapshot automation configuration for Azure blob storage
+##
+snapshotAutomation:
+  ## @param snapshotAutomation.enabled Enable snapshot automation
+  ##
+  enabled: false
+  ## @param snapshotAutomation.schedule.cron Cron schedule for snapshot creation (default: every 2 minutes)
+  ##
+  schedule:
+    cron: "*/2 * * * *"
+  ## @param snapshotAutomation.retention.days Number of days to retain snapshots
+  ##
+  retention:
+    days: 30
+  ## @param snapshotAutomation.retention.maxSnapshots Maximum number of snapshots to keep
+  ##
+  maxSnapshots: 100
+  ## @param snapshotAutomation.azureStorage.container Azure blob storage container name
+  ##
+  azureStorage:
+    container: "elasticsearch-snapshots"
+    basePath: "snapshots"
