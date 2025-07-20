@@ -16,11 +16,13 @@ spec:
           restartPolicy: OnFailure
           containers:
           - name: snapshot-manager
-            image: curlimages/curl:latest
+            image: ubuntu:22.04
             command: ["/bin/bash"]
             args:
             - -c
             - |
+              # Install required packages
+              apt-get update && apt-get install -y curl jq && \
               set -euo pipefail
               
               # Configuration
@@ -190,9 +192,9 @@ spec:
                   key: azure.client.default.key
             resources:
               requests:
-                memory: "64Mi"
-                cpu: "50m"
-              limits:
                 memory: "128Mi"
                 cpu: "100m"
+              limits:
+                memory: "256Mi"
+                cpu: "200m"
 {{- end }} 
