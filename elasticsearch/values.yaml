@@ -90,8 +90,7 @@ containerPorts:
 ## @param plugins Comma, semi-colon or space separated list of plugins to install at initialization
 ## ref: https://github.com/bitnami/containers/tree/main/bitnami/elasticsearch#environment-variables
 ##
-plugins:
-  - repository-azure
+plugins: "repository-azure"
 ## @param snapshotRepoPath File System snapshot repository path
 ## ref: https://github.com/bitnami/containers/tree/main/bitnami/elasticsearch#environment-variables
 ##
