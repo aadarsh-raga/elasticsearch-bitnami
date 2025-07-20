@@ -16,17 +16,17 @@ spec:
           restartPolicy: OnFailure
           containers:
           - name: snapshot-manager
-            image: curlimages/curl:latest
+            image: stedolan/jq:latest
             command: ["/bin/sh"]
             args:
             - -c
             - |
-              # Install required packages using apk (Alpine package manager)
-              apk add --no-cache jq && \
+              # Install curl (jq image is based on Alpine)
+              apk add --no-cache curl && \
               set -euo pipefail
               
               # Configuration
-              ELASTICSEARCH_URL="http://{{ include "common.names.fullname" . }}-coordinating-only:{{ .Values.containerPorts.restAPI }}"
+              ELASTICSEARCH_URL="http://{{ include "common.names.fullname" . }}-master:{{ .Values.containerPorts.restAPI }}"
               REPOSITORY_NAME="azure-repo"
               SNAPSHOT_PREFIX="daily-snapshot"
               RETENTION_DAYS={{ .Values.snapshotAutomation.retention.days | default 30 }}
