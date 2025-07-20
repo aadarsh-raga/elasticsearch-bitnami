@@ -140,11 +140,36 @@ extraVolumeMounts: []
 initScripts:
   azureStorageSecrets.sh: |-
     #!/bin/bash
-    set -e
-    # Add Azure storage account name
-    echo "${AZURE_CLIENT_DEFAULT_ACCOUNT}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin azure.client.default.account
-    # Add Azure storage account key
-    echo "${AZURE_CLIENT_DEFAULT_KEY}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin azure.client.default.key
+    
+    # Enable debugging
+    set -x
+    
+    echo "=== Debug: Checking environment variables ==="
+    echo "Available environment variables with 'AZURE' in name:"
+    env | grep -i azure || echo "No AZURE environment variables found"
+    
+    echo "All environment variables:"
+    env | sort
+    
+    echo "=== Checking if secret variables are set ==="
+    echo "AZURE_CLIENT_DEFAULT_ACCOUNT value: '${AZURE_CLIENT_DEFAULT_ACCOUNT:-NOT_SET}'"
+    echo "AZURE_CLIENT_DEFAULT_KEY value: '${AZURE_CLIENT_DEFAULT_KEY:-NOT_SET}'"
+    
+    # Only proceed if variables are actually set
+    if [ -n "${AZURE_CLIENT_DEFAULT_ACCOUNT:-}" ] && [ -n "${AZURE_CLIENT_DEFAULT_KEY:-}" ]; then
+        echo "=== Adding credentials to Elasticsearch keystore ==="
+        
+        # Add to keystore non-interactively
+        echo "${AZURE_CLIENT_DEFAULT_ACCOUNT}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin azure.client.default.account
+        echo "${AZURE_CLIENT_DEFAULT_KEY}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin azure.client.default.key
+        
+        echo "Azure credentials added to Elasticsearch keystore successfully"
+    else
+        echo "ERROR: Required environment variables are not set"
+        echo "AZURE_CLIENT_DEFAULT_ACCOUNT: '${AZURE_CLIENT_DEFAULT_ACCOUNT:-NOT_SET}'"
+        echo "AZURE_CLIENT_DEFAULT_KEY: '${AZURE_CLIENT_DEFAULT_KEY:-NOT_SET}'"
+        exit 1
+    fi
 ## @param initScriptsCM ConfigMap with the init scripts. Evaluated as a template.
 ## Note: This will override initScripts
 ##
