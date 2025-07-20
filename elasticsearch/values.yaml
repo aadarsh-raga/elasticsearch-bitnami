@@ -155,9 +155,9 @@ initScripts:
     if [ -n "${AZURE_ACCOUNT}" ] && [ -n "${AZURE_KEY}" ]; then
         echo "=== Adding credentials to Elasticsearch keystore ==="
         
-        # Add to keystore non-interactively
-        echo "${AZURE_ACCOUNT}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin azure.client.default.account
-        echo "${AZURE_KEY}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin azure.client.default.key
+        # Add to keystore non-interactively (force overwrite if exists)
+        echo "${AZURE_ACCOUNT}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin --force azure.client.default.account
+        echo "${AZURE_KEY}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin --force azure.client.default.key
         
         echo "Azure credentials added to Elasticsearch keystore successfully"
     else
