@@ -140,8 +140,11 @@ extraVolumeMounts: []
 initScripts:
   azureStorageSecrets.sh: |-
     #!/bin/bash
-    echo "$AZURE_CLIENT_DEFAULT_ACCOUNT" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add -f azure.client.default.account
-    echo "$AZURE_CLIENT_DEFAULT_KEY" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add -f azure.client.default.key
+    set -e
+    # Add Azure storage account name
+    echo "${AZURE_CLIENT_DEFAULT_ACCOUNT}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin azure.client.default.account
+    # Add Azure storage account key
+    echo "${AZURE_CLIENT_DEFAULT_KEY}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin azure.client.default.key
 ## @param initScriptsCM ConfigMap with the init scripts. Evaluated as a template.
 ## Note: This will override initScripts
 ##
