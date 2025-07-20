@@ -118,17 +118,11 @@ spec:
                   if [ "$indices_count" -eq 0 ]; then
                       log "No indices found to snapshot. Creating empty snapshot for repository verification..."
                       
-                      # Create a minimal snapshot with no indices
+                      # Create a minimal snapshot with no indices (exactly like the manual command)
                       local snapshot_config='{
                           "indices": "",
                           "ignore_unavailable": true,
-                          "include_global_state": false,
-                          "metadata": {
-                              "created_by": "snapshot-automation",
-                              "created_at": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
-                              "retention_days": '$RETENTION_DAYS',
-                              "note": "Empty snapshot - no indices present"
-                          }
+                          "include_global_state": false
                       }'
                   else
                       log "Found $indices_count indices to snapshot"
@@ -137,12 +131,7 @@ spec:
                       local snapshot_config='{
                           "indices": "*,-.security*,-.kibana*,-.apm*,-.watches*,-.triggered_watches*,-.watcher-history*,-.ml*",
                           "ignore_unavailable": true,
-                          "include_global_state": false,
-                          "metadata": {
-                              "created_by": "snapshot-automation",
-                              "created_at": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
-                              "retention_days": '$RETENTION_DAYS'
-                          }
+                          "include_global_state": false
                       }'
                   fi
                   
@@ -269,6 +258,11 @@ spec:
                   wait_for_elasticsearch
                   create_repository
                   verify_repository
+                  
+                  # Small delay to ensure repository is fully ready
+                  log "Waiting 5 seconds for repository to be fully ready..."
+                  sleep 5
+                  
                   create_snapshot
                   cleanup_old_snapshots
                   
