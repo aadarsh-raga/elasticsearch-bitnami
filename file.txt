@@ -2,3 +2,4 @@ working till here getting keystore in there
 completed - snapshot to be saved in azure blob.
 
 Need a snapshot policy though
+Snapshot working till previous commit but failed to create err comign

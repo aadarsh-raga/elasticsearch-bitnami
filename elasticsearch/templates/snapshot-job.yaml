@@ -92,12 +92,17 @@ spec:
                       }
                   }'
                   
-                  if curl -s -f -XPUT "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME" \
+                  local response=$(curl -s -w "\n%{http_code}" -XPUT "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME" \
                       -H 'Content-Type: application/json' \
-                      -d "$repo_config"; then
+                      -d "$repo_config")
+                  
+                  local http_code=$(echo "$response" | tail -n1)
+                  local response_body=$(echo "$response" | head -n -1)
+                  
+                  if [ "$http_code" = "200" ]; then
                       log "Repository '$REPOSITORY_NAME' created successfully"
                   else
-                      error "Failed to create repository '$REPOSITORY_NAME'"
+                      error "Failed to create repository '$REPOSITORY_NAME'. HTTP Code: $http_code, Response: $response_body"
                   fi
               }
               
@@ -117,12 +122,17 @@ spec:
                       }
                   }'
                   
-                  if curl -s -f -XPUT "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME/$snapshot_name?wait_for_completion=true" \
+                  local response=$(curl -s -w "\n%{http_code}" -XPUT "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME/$snapshot_name?wait_for_completion=true" \
                       -H 'Content-Type: application/json' \
-                      -d "$snapshot_config"; then
+                      -d "$snapshot_config")
+                  
+                  local http_code=$(echo "$response" | tail -n1)
+                  local response_body=$(echo "$response" | head -n -1)
+                  
+                  if [ "$http_code" = "200" ]; then
                       log "Snapshot '$snapshot_name' created successfully"
                   else
-                      error "Failed to create snapshot '$snapshot_name'"
+                      error "Failed to create snapshot '$snapshot_name'. HTTP Code: $http_code, Response: $response_body"
                   fi
               }
               
