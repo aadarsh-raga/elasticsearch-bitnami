@@ -151,6 +151,7 @@ spec:
               if ! is_dir_empty "$DB_DEFAULT_PLUGINS_DIR"; then
                   cp -nr "$DB_DEFAULT_PLUGINS_DIR"/* /plugins
               fi
+              echo hello world
           volumeMounts:
             - name: empty-dir
               mountPath: /tmp
