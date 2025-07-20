@@ -64,6 +64,18 @@ spec:
                   error "Elasticsearch failed to become ready after $max_attempts attempts"
               }
               
+              # Check repository status
+              check_repository_status() {
+                  log "Checking repository '$REPOSITORY_NAME' status..."
+                  
+                  local repo_response=$(curl -s "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME")
+                  log "Repository response: $repo_response"
+                  
+                  # Try to get snapshots list
+                  local snapshots_response=$(curl -s "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME/_all")
+                  log "Snapshots response: $snapshots_response"
+              }
+              
               # Create snapshot (exactly like manual command)
               create_snapshot() {
                   local snapshot_name="${SNAPSHOT_PREFIX}-$(date +%Y%m%d-%H%M%S)"
@@ -95,6 +107,7 @@ spec:
                   log "Starting snapshot automation..."
                   
                   wait_for_elasticsearch
+                  check_repository_status
                   create_snapshot
                   
                   log "Snapshot automation completed successfully"
