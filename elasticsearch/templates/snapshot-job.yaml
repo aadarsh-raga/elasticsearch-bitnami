@@ -175,12 +175,76 @@ spec:
                   fi
               }
               
+              # Verify and fix repository status
+              verify_repository() {
+                  log "Verifying repository '$REPOSITORY_NAME' status..."
+                  
+                  local repo_info=$(curl -s "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME")
+                  if [ $? -ne 0 ]; then
+                      error "Failed to get repository information"
+                  fi
+                  
+                  # Check if repository is disabled
+                  if echo "$repo_info" | jq -e '.error' > /dev/null 2>&1; then
+                      local error_msg=$(echo "$repo_info" | jq -r '.error.reason // "Unknown error"')
+                      if echo "$error_msg" | grep -q "disabled"; then
+                          log "Repository is disabled, attempting to re-enable..."
+                          
+                          # Try to re-enable by recreating the repository
+                          local repo_config='{
+                              "type": "azure",
+                              "settings": {
+                                  "container": "{{ .Values.snapshotAutomation.azureStorage.container | default "elasticsearch-snapshots" }}",
+                                  "base_path": "{{ .Values.snapshotAutomation.azureStorage.basePath | default "snapshots" }}",
+                                  "compress": true,
+                                  "chunk_size": "1g"
+                              }
+                          }'
+                          
+                          local response=$(curl -s -w "\n%{http_code}" -XPOST "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME/_verify" \
+                              -H 'Content-Type: application/json')
+                          
+                          local http_code=$(echo "$response" | tail -n1)
+                          local response_body=$(echo "$response" | head -n -1)
+                          
+                          if [ "$http_code" = "200" ]; then
+                              log "Repository verification successful"
+                          else
+                              warn "Repository verification failed. HTTP Code: $http_code, Response: $response_body"
+                              log "Attempting to recreate repository..."
+                              
+                              # Delete and recreate the repository
+                              curl -s -XDELETE "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME" > /dev/null 2>&1
+                              sleep 5
+                              
+                              local create_response=$(curl -s -w "\n%{http_code}" -XPUT "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME" \
+                                  -H 'Content-Type: application/json' \
+                                  -d "$repo_config")
+                              
+                              local create_http_code=$(echo "$create_response" | tail -n1)
+                              local create_response_body=$(echo "$create_response" | head -n -1)
+                              
+                              if [ "$create_http_code" = "200" ]; then
+                                  log "Repository '$REPOSITORY_NAME' recreated successfully"
+                              else
+                                  error "Failed to recreate repository '$REPOSITORY_NAME'. HTTP Code: $create_http_code, Response: $create_response_body"
+                              fi
+                          fi
+                      else
+                          error "Repository error: $error_msg"
+                      fi
+                  else
+                      log "Repository '$REPOSITORY_NAME' is healthy"
+                  fi
+              }
+              
               # Main execution
               main() {
                   log "Starting snapshot automation..."
                   
                   wait_for_elasticsearch
                   create_repository
+                  verify_repository
                   create_snapshot
                   cleanup_old_snapshots
                   
