@@ -160,6 +160,9 @@ initScripts:
         echo "${AZURE_KEY}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin --force azure.client.default.key
         
         echo "Azure credentials added to Elasticsearch keystore successfully"
+        
+        # Try to create marker file, but don't fail if we can't
+        touch /bitnami/elasticsearch/.user_scripts_initialized 2>/dev/null || echo "Note: Could not create marker file (read-only filesystem)"
     else
         echo "ERROR: Could not find Azure credentials in environment"
         echo "Available azure variables:"
