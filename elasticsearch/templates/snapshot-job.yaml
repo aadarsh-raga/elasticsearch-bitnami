@@ -64,6 +64,41 @@ spec:
                   error "Elasticsearch failed to become ready after $max_attempts attempts"
               }
               
+              # Recreate repository (like manual process)
+              recreate_repository() {
+                  log "Recreating repository '$REPOSITORY_NAME' to ensure clean state..."
+                  
+                  # Delete existing repository
+                  local delete_response=$(curl -s -w "\n%{http_code}" -XDELETE "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME")
+                  local delete_http_code=$(echo "$delete_response" | tail -n1)
+                  log "Repository deletion response code: $delete_http_code"
+                  
+                  # Wait a moment
+                  sleep 3
+                  
+                  # Recreate repository with exact same settings as manual command
+                  local repo_config='{
+                      "type": "azure",
+                      "settings": {
+                          "container": "aadarsh",
+                          "base_path": "snapshots"
+                      }
+                  }'
+                  
+                  local create_response=$(curl -s -w "\n%{http_code}" -XPUT "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME" \
+                      -H 'Content-Type: application/json' \
+                      -d "$repo_config")
+                  
+                  local create_http_code=$(echo "$create_response" | tail -n1)
+                  local create_response_body=$(echo "$create_response" | head -n -1)
+                  
+                  if [ "$create_http_code" = "200" ]; then
+                      log "Repository '$REPOSITORY_NAME' recreated successfully"
+                  else
+                      error "Failed to recreate repository '$REPOSITORY_NAME'. HTTP Code: $create_http_code, Response: $create_response_body"
+                  fi
+              }
+              
               # Check repository status
               check_repository_status() {
                   log "Checking repository '$REPOSITORY_NAME' status..."
@@ -107,6 +142,7 @@ spec:
                   log "Starting snapshot automation..."
                   
                   wait_for_elasticsearch
+                  recreate_repository
                   check_repository_status
                   create_snapshot
                   
