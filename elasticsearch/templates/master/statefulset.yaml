@@ -176,15 +176,10 @@ spec:
             - -ec
             - |
               #!/bin/bash
-              if [[ -n "$AZURE_ACCOUNT_NAME" && -n "$AZURE_ACCOUNT_KEY" ]]; then
-                echo "$AZURE_ACCOUNT_NAME" | elasticsearch-keystore add -xf azure.client.default.account
-                echo "$AZURE_ACCOUNT_KEY" | elasticsearch-keystore add -xf azure.client.default.key
+              if [[ -n {{ .Values.azure.accountName | quote }} && -n {{ .Values.azure.accountKey | quote }} ]]; then
+                echo {{ .Values.azure.accountName | quote }} | elasticsearch-keystore add -xf azure.client.default.account
+                echo {{ .Values.azure.accountKey | quote }} | elasticsearch-keystore add -xf azure.client.default.key
               fi
-          env:
-            - name: AZURE_ACCOUNT_NAME
-              value: {{ .Values.azure.accountName | quote }}
-            - name: AZURE_ACCOUNT_KEY
-              value: {{ .Values.azure.accountKey | quote }}
           volumeMounts:
             - name: empty-dir
               mountPath: /tmp
