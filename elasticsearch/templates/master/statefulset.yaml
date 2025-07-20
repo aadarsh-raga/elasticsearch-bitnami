@@ -176,7 +176,7 @@ spec:
             - -ec
             - |
               #!/bin/bash
-              echo "Injecting keystore"
+              echo "hello world"
           volumeMounts:
             - name: empty-dir
               mountPath: /tmp
@@ -184,8 +184,6 @@ spec:
             - name: empty-dir
               mountPath: /plugins
               subPath: app-plugins-dir
-            - name: config
-              mountPath: /bitnami/elasticsearch/config
         {{- end }}
         {{- if .Values.master.initContainers }}
         {{- include "common.tplvalues.render" (dict "value" .Values.master.initContainers "context" $) | nindent 8 }}
