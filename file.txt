@@ -1,1 +1,4 @@
 working till here getting keystore in there
+completed - snapshot to be saved in azure blob.
+
+Need a snapshot policy though

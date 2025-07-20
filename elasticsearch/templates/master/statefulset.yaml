@@ -158,33 +158,6 @@ spec:
             - name: empty-dir
               mountPath: /plugins
               subPath: app-plugins-dir
-        {{- if .Values.azure.enabled }}
-        - name: inject-keystore
-          image: {{ include "elasticsearch.image" . }}
-          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
-          {{- if .Values.master.containerSecurityContext.enabled }}
-          securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.master.containerSecurityContext "context" $) | nindent 12 }}
-          {{- end }}
-          {{- if .Values.master.resources }}
-          resources: {{- toYaml .Values.master.resources | nindent 12 }}
-          {{- else if ne .Values.master.resourcesPreset "none" }}
-          resources: {{- include "common.resources.preset" (dict "type" .Values.master.resourcesPreset) | nindent 12 }}
-          {{- end }}
-          command:
-            - /bin/bash
-          args:
-            - -ec
-            - |
-              #!/bin/bash
-              echo "hello world"
-          volumeMounts:
-            - name: empty-dir
-              mountPath: /tmp
-              subPath: tmp-dir
-            - name: empty-dir
-              mountPath: /plugins
-              subPath: app-plugins-dir
-        {{- end }}
         {{- if .Values.master.initContainers }}
         {{- include "common.tplvalues.render" (dict "value" .Values.master.initContainers "context" $) | nindent 8 }}
         {{- end }}
