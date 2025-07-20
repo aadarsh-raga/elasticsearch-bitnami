@@ -16,17 +16,17 @@ spec:
           restartPolicy: OnFailure
           containers:
           - name: snapshot-manager
-            image: ubuntu:22.04
-            command: ["/bin/bash"]
+            image: curlimages/curl:latest
+            command: ["/bin/sh"]
             args:
             - -c
             - |
-              # Install required packages
-              apt-get update && apt-get install -y curl jq && \
+              # Install required packages using apk (Alpine package manager)
+              apk add --no-cache jq && \
               set -euo pipefail
               
               # Configuration
-              ELASTICSEARCH_URL="http://{{ include "elasticsearch.service.name" . }}:{{ .Values.containerPorts.restAPI }}"
+              ELASTICSEARCH_URL="http://{{ include "common.names.fullname" . }}-coordinating-only:{{ .Values.containerPorts.restAPI }}"
               REPOSITORY_NAME="azure-repo"
               SNAPSHOT_PREFIX="daily-snapshot"
               RETENTION_DAYS={{ .Values.snapshotAutomation.retention.days | default 30 }}
