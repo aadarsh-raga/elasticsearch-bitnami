@@ -75,10 +75,10 @@ spec:
               create_repository() {
                   log "Checking if repository '$REPOSITORY_NAME' exists..."
                   
-                  if curl -s -f "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME" > /dev/null 2>&1; then
-                      log "Repository '$REPOSITORY_NAME' already exists"
-                      return 0
-                  fi
+                  # Always delete and recreate the repository to ensure clean state
+                  log "Deleting existing repository '$REPOSITORY_NAME' to ensure clean state..."
+                  curl -s -XDELETE "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME" > /dev/null 2>&1
+                  sleep 3
                   
                   log "Creating repository '$REPOSITORY_NAME'..."
                   
@@ -257,7 +257,6 @@ spec:
                   
                   wait_for_elasticsearch
                   create_repository
-                  verify_repository
                   
                   # Small delay to ensure repository is fully ready
                   log "Waiting 5 seconds for repository to be fully ready..."
