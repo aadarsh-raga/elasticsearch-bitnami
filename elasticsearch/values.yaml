@@ -140,7 +140,8 @@ extraVolumeMounts: []
 initScripts:
   azureStorageSecrets.sh: |-
     #!/bin/bash
-    set -e
+    # Don't exit on errors initially - we want to handle them gracefully
+    set +e
     
     echo "=== Getting Azure credentials from environment ==="
     
@@ -153,22 +154,38 @@ initScripts:
     
     # Check if variables are set
     if [ -n "${AZURE_ACCOUNT}" ] && [ -n "${AZURE_KEY}" ]; then
-        echo "=== Adding credentials to Elasticsearch keystore ==="
+        echo "=== Checking existing keystore ==="
         
-        # Add to keystore non-interactively (force overwrite if exists)
-        echo "${AZURE_ACCOUNT}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin --force azure.client.default.account
-        echo "${AZURE_KEY}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin --force azure.client.default.key
+        # Check if keystore already has the account setting
+        /opt/bitnami/elasticsearch/bin/elasticsearch-keystore list | grep -q "azure.client.default.account"
+        HAS_ACCOUNT=$?
         
-        echo "Azure credentials added to Elasticsearch keystore successfully"
+        /opt/bitnami/elasticsearch/bin/elasticsearch-keystore list | grep -q "azure.client.default.key"
+        HAS_KEY=$?
         
-        # Try to create marker file, but don't fail if we can't
-        touch /bitnami/elasticsearch/.user_scripts_initialized 2>/dev/null || echo "Note: Could not create marker file (read-only filesystem)"
+        if [ $HAS_ACCOUNT -eq 0 ] && [ $HAS_KEY -eq 0 ]; then
+            echo "Azure credentials already exist in keystore, skipping..."
+        else
+            echo "=== Adding credentials to Elasticsearch keystore ==="
+            
+            # Re-enable exit on error for keystore operations
+            set -e
+            
+            # Add to keystore non-interactively (force overwrite if exists)
+            echo "${AZURE_ACCOUNT}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin --force azure.client.default.account
+            echo "${AZURE_KEY}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin --force azure.client.default.key
+            
+            echo "Azure credentials added to Elasticsearch keystore successfully"
+        fi
+        
     else
         echo "ERROR: Could not find Azure credentials in environment"
         echo "Available azure variables:"
         env | grep -i azure || echo "No azure variables found"
         exit 1
     fi
+    
+    echo "Script completed successfully"
 ## @param initScriptsCM ConfigMap with the init scripts. Evaluated as a template.
 ## Note: This will override initScripts
 ##
