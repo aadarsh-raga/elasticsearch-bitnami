@@ -140,34 +140,30 @@ extraVolumeMounts: []
 initScripts:
   azureStorageSecrets.sh: |-
     #!/bin/bash
-    
-    # Enable debugging
-    set -x
+    set -e
     
     echo "=== Debug: Checking environment variables ==="
-    echo "Available environment variables with 'AZURE' in name:"
-    env | grep -i azure || echo "No AZURE environment variables found"
     
-    echo "All environment variables:"
-    env | sort
+    # The actual environment variable names use dots, not underscores
+    AZURE_ACCOUNT="${azure.client.default.account:-}"
+    AZURE_KEY="${azure.client.default.key:-}"
     
-    echo "=== Checking if secret variables are set ==="
-    echo "AZURE_CLIENT_DEFAULT_ACCOUNT value: '${AZURE_CLIENT_DEFAULT_ACCOUNT:-NOT_SET}'"
-    echo "AZURE_CLIENT_DEFAULT_KEY value: '${AZURE_CLIENT_DEFAULT_KEY:-NOT_SET}'"
+    echo "Azure account: '${AZURE_ACCOUNT}'"
+    echo "Azure key length: ${#AZURE_KEY}"
     
-    # Only proceed if variables are actually set
-    if [ -n "${AZURE_CLIENT_DEFAULT_ACCOUNT:-}" ] && [ -n "${AZURE_CLIENT_DEFAULT_KEY:-}" ]; then
+    # Check if variables are set
+    if [ -n "${AZURE_ACCOUNT}" ] && [ -n "${AZURE_KEY}" ]; then
         echo "=== Adding credentials to Elasticsearch keystore ==="
         
         # Add to keystore non-interactively
-        echo "${AZURE_CLIENT_DEFAULT_ACCOUNT}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin azure.client.default.account
-        echo "${AZURE_CLIENT_DEFAULT_KEY}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin azure.client.default.key
+        echo "${AZURE_ACCOUNT}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin azure.client.default.account
+        echo "${AZURE_KEY}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin azure.client.default.key
         
         echo "Azure credentials added to Elasticsearch keystore successfully"
     else
         echo "ERROR: Required environment variables are not set"
-        echo "AZURE_CLIENT_DEFAULT_ACCOUNT: '${AZURE_CLIENT_DEFAULT_ACCOUNT:-NOT_SET}'"
-        echo "AZURE_CLIENT_DEFAULT_KEY: '${AZURE_CLIENT_DEFAULT_KEY:-NOT_SET}'"
+        echo "azure.client.default.account: '${AZURE_ACCOUNT}'"
+        echo "azure.client.default.key length: ${#AZURE_KEY}"
         exit 1
     fi
 ## @param initScriptsCM ConfigMap with the init scripts. Evaluated as a template.
