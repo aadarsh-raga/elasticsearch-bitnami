@@ -2684,3 +2684,18 @@ kibana:
     hosts:
       - '{{ include "elasticsearch.service.name" . }}'
     port: '{{ include "elasticsearch.service.ports.restAPI" . }}'
+## @section Azure Blob Storage Configuration
+
+## @param azure.enabled Enable Azure blob storage integration
+##
+azure:
+  enabled: false
+  ## @param azure.accountName Azure storage account name
+  ##
+  accountName: ""
+  ## @param azure.accountKey Azure storage account key
+  ##
+  accountKey: ""
+  ## @param azure.containerName Azure blob container name
+  ##
+  containerName: ""
