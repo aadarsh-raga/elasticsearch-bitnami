@@ -142,11 +142,11 @@ initScripts:
     #!/bin/bash
     set -e
     
-    echo "=== Debug: Checking environment variables ==="
+    echo "=== Getting Azure credentials from environment ==="
     
-    # The actual environment variable names use dots, not underscores
-    AZURE_ACCOUNT="${azure.client.default.account:-}"
-    AZURE_KEY="${azure.client.default.key:-}"
+    # Use env command to get variables with dots in names
+    AZURE_ACCOUNT=$(env | grep '^azure\.client\.default\.account=' | cut -d'=' -f2-)
+    AZURE_KEY=$(env | grep '^azure\.client\.default\.key=' | cut -d'=' -f2-)
     
     echo "Azure account: '${AZURE_ACCOUNT}'"
     echo "Azure key length: ${#AZURE_KEY}"
@@ -161,9 +161,9 @@ initScripts:
         
         echo "Azure credentials added to Elasticsearch keystore successfully"
     else
-        echo "ERROR: Required environment variables are not set"
-        echo "azure.client.default.account: '${AZURE_ACCOUNT}'"
-        echo "azure.client.default.key length: ${#AZURE_KEY}"
+        echo "ERROR: Could not find Azure credentials in environment"
+        echo "Available azure variables:"
+        env | grep -i azure || echo "No azure variables found"
         exit 1
     fi
 ## @param initScriptsCM ConfigMap with the init scripts. Evaluated as a template.
