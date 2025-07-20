@@ -111,16 +111,40 @@ spec:
                   local snapshot_name="${SNAPSHOT_PREFIX}-$(date +%Y%m%d-%H%M%S)"
                   log "Creating snapshot '$snapshot_name'..."
                   
-                  local snapshot_config='{
-                      "indices": "*,-.security*,-.kibana*,-.apm*,-.watches*,-.triggered_watches*,-.watcher-history*,-.ml*",
-                      "ignore_unavailable": true,
-                      "include_global_state": false,
-                      "metadata": {
-                          "created_by": "snapshot-automation",
-                          "created_at": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
-                          "retention_days": '$RETENTION_DAYS'
-                      }
-                  }'
+                  # Check if there are any indices to snapshot
+                  local indices_response=$(curl -s "$ELASTICSEARCH_URL/_cat/indices?format=json")
+                  local indices_count=$(echo "$indices_response" | jq 'length')
+                  
+                  if [ "$indices_count" -eq 0 ]; then
+                      log "No indices found to snapshot. Creating empty snapshot for repository verification..."
+                      
+                      # Create a minimal snapshot with no indices
+                      local snapshot_config='{
+                          "indices": "",
+                          "ignore_unavailable": true,
+                          "include_global_state": false,
+                          "metadata": {
+                              "created_by": "snapshot-automation",
+                              "created_at": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+                              "retention_days": '$RETENTION_DAYS',
+                              "note": "Empty snapshot - no indices present"
+                          }
+                      }'
+                  else
+                      log "Found $indices_count indices to snapshot"
+                      
+                      # Create snapshot with all indices except system ones
+                      local snapshot_config='{
+                          "indices": "*,-.security*,-.kibana*,-.apm*,-.watches*,-.triggered_watches*,-.watcher-history*,-.ml*",
+                          "ignore_unavailable": true,
+                          "include_global_state": false,
+                          "metadata": {
+                              "created_by": "snapshot-automation",
+                              "created_at": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+                              "retention_days": '$RETENTION_DAYS'
+                          }
+                      }'
+                  fi
                   
                   local response=$(curl -s -w "\n%{http_code}" -XPUT "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME/$snapshot_name?wait_for_completion=true" \
                       -H 'Content-Type: application/json' \
