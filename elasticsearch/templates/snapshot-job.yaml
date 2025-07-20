@@ -16,13 +16,13 @@ spec:
           restartPolicy: OnFailure
           containers:
           - name: snapshot-manager
-            image: stedolan/jq:latest
+            image: alpine:latest
             command: ["/bin/sh"]
             args:
             - -c
             - |
-              # Install curl (jq image is based on Alpine)
-              apk add --no-cache curl && \
+              # Install required packages
+              apk add --no-cache curl jq && \
               set -euo pipefail
               
               # Configuration
