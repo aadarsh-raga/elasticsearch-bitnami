@@ -2737,7 +2737,7 @@ kibana:
 ## @param azure.enabled Enable Azure blob storage integration
 ##
 azure:
-  enabled: false
+  enabled: true
   accountName: ""
   accountKey: ""
   ## @param azure.containerName Azure blob container name
@@ -2750,7 +2750,7 @@ azure:
 snapshotAutomation:
   ## @param snapshotAutomation.enabled Enable snapshot automation
   ##
-  enabled: false
+  enabled: true
   ## @param snapshotAutomation.schedule.cron Cron schedule for snapshot creation (default: every 2 minutes)
   ##
   schedule:
