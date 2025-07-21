@@ -1,0 +1,172 @@
+{{- if .Values.snapshotAutomation.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "common.names.fullname" . }}-snapshot-job
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+spec:
+  schedule: "{{ .Values.snapshotAutomation.schedule.cron | default "*/2 * * * *" }}"  # Every 2 minutes
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: snapshot-manager
+            image: alpine:latest
+            command: ["/bin/sh"]
+            args:
+            - -c
+            - |
+              # Install required packages
+              apk add --no-cache curl jq && \
+              set -euo pipefail
+              
+              # Configuration
+              ELASTICSEARCH_URL="http://{{ include "common.names.fullname" . }}:{{ .Values.containerPorts.restAPI }}"
+              REPOSITORY_NAME="azure-repo"
+              SNAPSHOT_PREFIX="daily-snapshot"
+              
+              # Colors for output
+              GREEN='\033[0;32m'
+              RED='\033[0;31m'
+              NC='\033[0m'
+              
+              log() {
+                  echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}"
+              }
+              
+              error() {
+                  echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $1${NC}"
+                  exit 1
+              }
+              
+              # Wait for Elasticsearch to be ready
+              wait_for_elasticsearch() {
+                  log "Waiting for Elasticsearch to be ready..."
+                  local max_attempts=30
+                  local attempt=1
+                  
+                  while [ $attempt -le $max_attempts ]; do
+                      if curl -s -f "$ELASTICSEARCH_URL/_cluster/health" > /dev/null 2>&1; then
+                          log "Elasticsearch is ready!"
+                          return 0
+                      fi
+                      
+                      log "Attempt $attempt/$max_attempts: Elasticsearch not ready yet, waiting 10 seconds..."
+                      sleep 10
+                      attempt=$((attempt + 1))
+                  done
+                  
+                  error "Elasticsearch failed to become ready after $max_attempts attempts"
+              }
+              
+              # Recreate repository (like manual process)
+              recreate_repository() {
+                  log "Recreating repository '$REPOSITORY_NAME' to ensure clean state..."
+                  
+                  # Delete existing repository
+                  local delete_response=$(curl -s -w "\n%{http_code}" -XDELETE "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME")
+                  local delete_http_code=$(echo "$delete_response" | tail -n1)
+                  log "Repository deletion response code: $delete_http_code"
+                  
+                  # Wait a moment
+                  sleep 3
+                  
+                  # Recreate repository with exact same settings as manual command
+                  local repo_config='{
+                      "type": "azure",
+                      "settings": {
+                          "container": "aadarsh",
+                          "base_path": "snapshots"
+                      }
+                  }'
+                  
+                  local create_response=$(curl -s -w "\n%{http_code}" -XPUT "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME" \
+                      -H 'Content-Type: application/json' \
+                      -d "$repo_config")
+                  
+                  local create_http_code=$(echo "$create_response" | tail -n1)
+                  local create_response_body=$(echo "$create_response" | head -n -1)
+                  
+                  if [ "$create_http_code" = "200" ]; then
+                      log "Repository '$REPOSITORY_NAME' recreated successfully"
+                  else
+                      error "Failed to recreate repository '$REPOSITORY_NAME'. HTTP Code: $create_http_code, Response: $create_response_body"
+                  fi
+              }
+              
+              # Check repository status
+              check_repository_status() {
+                  log "Checking repository '$REPOSITORY_NAME' status..."
+                  
+                  local repo_response=$(curl -s "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME")
+                  log "Repository response: $repo_response"
+                  
+                  # Try to get snapshots list
+                  local snapshots_response=$(curl -s "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME/_all")
+                  log "Snapshots response: $snapshots_response"
+              }
+              
+              # Create snapshot (exactly like manual command)
+              create_snapshot() {
+                  local snapshot_name="${SNAPSHOT_PREFIX}-$(date +%Y%m%d-%H%M%S)"
+                  log "Creating snapshot '$snapshot_name'..."
+                  
+                  # Exact same configuration as manual command
+                  local snapshot_config='{
+                      "indices": "",
+                      "ignore_unavailable": true,
+                      "include_global_state": false
+                  }'
+                  
+                  local response=$(curl -s -w "\n%{http_code}" -XPUT "$ELASTICSEARCH_URL/_snapshot/$REPOSITORY_NAME/$snapshot_name?wait_for_completion=true" \
+                      -H 'Content-Type: application/json' \
+                      -d "$snapshot_config")
+                  
+                  local http_code=$(echo "$response" | tail -n1)
+                  local response_body=$(echo "$response" | head -n -1)
+                  
+                  if [ "$http_code" = "200" ]; then
+                      log "Snapshot '$snapshot_name' created successfully"
+                  else
+                      error "Failed to create snapshot '$snapshot_name'. HTTP Code: $http_code, Response: $response_body"
+                  fi
+              }
+              
+              # Main execution
+              main() {
+                  log "Starting snapshot automation..."
+                  
+                  wait_for_elasticsearch
+                  recreate_repository
+                  check_repository_status
+                  create_snapshot
+                  
+                  log "Snapshot automation completed successfully"
+              }
+              
+              # Run main function
+              main "$@"
+            env:
+            - name: azure.client.default.account
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.extraEnvVarsSecret | default "elasticsearch-azure-credentials" }}
+                  key: azure.client.default.account
+            - name: azure.client.default.key
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.extraEnvVarsSecret | default "elasticsearch-azure-credentials" }}
+                  key: azure.client.default.key
+            resources:
+              requests:
+                memory: "128Mi"
+                cpu: "100m"
+              limits:
+                memory: "256Mi"
+                cpu: "200m"
+{{- end }} 

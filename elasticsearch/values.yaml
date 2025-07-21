@@ -1,3 +1,17 @@
+# Copyright Broadcom, Inc. All Rights Reserved.
+# SPDX-License-Identifier: APACHE-2.0
+
+## @section Global parameters
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry, imagePullSecrets and storageClass
+
+## @param global.imageRegistry Global Docker image registry
+## @param global.imagePullSecrets Global Docker registry secret names as an array
+## @param global.storageClass Global StorageClass for Persistent Volume(s)
+## @param global.elasticsearch.service.name Elasticsearch service name to be used in the Kibana subchart (ignored if kibanaEnabled=false)
+## @param global.elasticsearch.service.ports.restAPI Elasticsearch service restAPI port to be used in the Kibana subchart (ignored if kibanaEnabled=false)
+## @param global.kibanaEnabled Whether or not to enable Kibana
 ##
 global:
   imageRegistry: ""
@@ -76,7 +90,7 @@ containerPorts:
 ## @param plugins Comma, semi-colon or space separated list of plugins to install at initialization
 ## ref: https://github.com/bitnami/containers/tree/main/bitnami/elasticsearch#environment-variables
 ##
-plugins: "repository-azure"
+plugins: ""
 ## @param snapshotRepoPath File System snapshot repository path
 ## ref: https://github.com/bitnami/containers/tree/main/bitnami/elasticsearch#environment-variables
 ##
@@ -124,23 +138,54 @@ extraVolumeMounts: []
 ##      echo "Do something."
 ##
 initScripts:
-  register_azure_repo.sh: |
+  azureStorageSecrets.sh: |-
     #!/bin/bash
-    set -e
-    echo "Registering Azure snapshot repository in Elasticsearch..."
-    until curl -X PUT -u elastic:${ELASTIC_PASSWORD:-changeme} -H 'Content-Type: application/json' \
-      -d '{
-        "type": "azure",
-        "settings": {
-          "container": "aadarsh",
-          "client": "default"
-        }
-      }' \
-      http://elasticsearch-master:9200/_snapshot/azure_backup; do
-      echo "Waiting for Elasticsearch to be ready..."
-      sleep 10
-    done
-    echo "Azure snapshot repository registered."
+    # Don't exit on errors initially - we want to handle them gracefully
+    set +e
+    
+    echo "=== Getting Azure credentials from environment ==="
+    
+    # Use env command to get variables with dots in names
+    AZURE_ACCOUNT=$(env | grep '^azure\.client\.default\.account=' | cut -d'=' -f2-)
+    AZURE_KEY=$(env | grep '^azure\.client\.default\.key=' | cut -d'=' -f2-)
+    
+    echo "Azure account: '${AZURE_ACCOUNT}'"
+    echo "Azure key length: ${#AZURE_KEY}"
+    
+    # Check if variables are set
+    if [ -n "${AZURE_ACCOUNT}" ] && [ -n "${AZURE_KEY}" ]; then
+        echo "=== Checking existing keystore ==="
+        
+        # Check if keystore already has the account setting
+        /opt/bitnami/elasticsearch/bin/elasticsearch-keystore list | grep -q "azure.client.default.account"
+        HAS_ACCOUNT=$?
+        
+        /opt/bitnami/elasticsearch/bin/elasticsearch-keystore list | grep -q "azure.client.default.key"
+        HAS_KEY=$?
+        
+        if [ $HAS_ACCOUNT -eq 0 ] && [ $HAS_KEY -eq 0 ]; then
+            echo "Azure credentials already exist in keystore, skipping..."
+        else
+            echo "=== Adding credentials to Elasticsearch keystore ==="
+            
+            # Re-enable exit on error for keystore operations
+            set -e
+            
+            # Add to keystore non-interactively (force overwrite if exists)
+            echo "${AZURE_ACCOUNT}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin --force azure.client.default.account
+            echo "${AZURE_KEY}" | /opt/bitnami/elasticsearch/bin/elasticsearch-keystore add --stdin --force azure.client.default.key
+            
+            echo "Azure credentials added to Elasticsearch keystore successfully"
+        fi
+        
+    else
+        echo "ERROR: Could not find Azure credentials in environment"
+        echo "Available azure variables:"
+        env | grep -i azure || echo "No azure variables found"
+        exit 1
+    fi
+    
+    echo "Script completed successfully"
 ## @param initScriptsCM ConfigMap with the init scripts. Evaluated as a template.
 ## Note: This will override initScripts
 ##
@@ -154,19 +199,13 @@ initScriptsSecret: ""
 ##  - name: MY_ENV_VAR
 ##    value: env_var_value
 ##
-extraEnvVars:
-  - name: AZURE_STORAGE_ACCOUNT
-    value: "na"
-  - name: AZURE_STORAGE_KEY
-    value: "na"
-  - name: AZURE_STORAGE_CONNECTION_STRING
-    value: "na"
+extraEnvVars: []
 ## @param extraEnvVarsCM ConfigMap containing extra env vars to be added to all pods (evaluated as a template)
 ##
 extraEnvVarsCM: ""
 ## @param extraEnvVarsSecret Secret containing extra env vars to be added to all pods (evaluated as a template)
 ##
-extraEnvVarsSecret: ""
+extraEnvVarsSecret: elasticsearch-azure-credentials
 ## @param sidecars Add additional sidecar containers to the all elasticsearch node pod(s)
 ## e.g:
 ## sidecars:
@@ -514,7 +553,7 @@ master:
   ## @param master.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if master.resources is set (master.resources is recommended for production).
   ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
   ##
-  resourcesPreset: "nano"
+  resourcesPreset: "small"
   ## @param master.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
   ## Example:
   ## resources:
@@ -907,7 +946,7 @@ data:
   ## @param data.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if data.resources is set (data.resources is recommended for production).
   ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
   ##
-  resourcesPreset: "nano"
+  resourcesPreset: "medium"
   ## @param data.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
   ## Example:
   ## resources:
@@ -1301,7 +1340,7 @@ coordinating:
   ## @param coordinating.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if coordinating.resources is set (coordinating.resources is recommended for production).
   ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
   ##
-  resourcesPreset: "nano"
+  resourcesPreset: "small"
   ## @param coordinating.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
   ## Example:
   ## resources:
@@ -1664,7 +1703,7 @@ ingest:
   ## @param ingest.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if ingest.resources is set (ingest.resources is recommended for production).
   ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
   ##
-  resourcesPreset: "nano"
+  resourcesPreset: "small"
   ## @param ingest.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
   ## Example:
   ## resources:
@@ -2693,3 +2732,42 @@ kibana:
     hosts:
       - '{{ include "elasticsearch.service.name" . }}'
     port: '{{ include "elasticsearch.service.ports.restAPI" . }}'
+## @section Azure Blob Storage Configuration
+
+## @param azure.enabled Enable Azure blob storage integration
+##
+azure:
+  enabled: false
+  ## @param azure.accountName Azure storage account name
+  ##
+  accountName: ""
+  ## @param azure.accountKey Azure storage account key
+  ##
+  accountKey: ""
+  ## @param azure.containerName Azure blob container name
+  ##
+  containerName: ""
+
+## @section Snapshot Automation Parameters
+## Snapshot automation configuration for Azure blob storage
+##
+snapshotAutomation:
+  ## @param snapshotAutomation.enabled Enable snapshot automation
+  ##
+  enabled: false
+  ## @param snapshotAutomation.schedule.cron Cron schedule for snapshot creation (default: every 2 minutes)
+  ##
+  schedule:
+    cron: "*/2 * * * *"
+  ## @param snapshotAutomation.retention.days Number of days to retain snapshots
+  ##
+  retention:
+    days: 30
+  ## @param snapshotAutomation.retention.maxSnapshots Maximum number of snapshots to keep
+  ##
+  maxSnapshots: 100
+  ## @param snapshotAutomation.azureStorage.container Azure blob storage container name
+  ##
+  azureStorage:
+    container: "elasticsearch-snapshots"
+    basePath: "snapshots"
